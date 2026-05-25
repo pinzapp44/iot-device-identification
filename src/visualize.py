@@ -7,10 +7,9 @@ from pathlib import Path
 
 import matplotlib.pyplot as plt
 import numpy as np
-from scipy import signal as sg
 
 from config import CLASSES, DATA_FILES, WINDOW_SIZE
-from preprocessing import segment_signal
+from preprocessing import segment_signal, windows_to_model_input
 
 
 def parse_args() -> argparse.Namespace:
@@ -21,20 +20,16 @@ def parse_args() -> argparse.Namespace:
     return parser.parse_args()
 
 
-def save_spectrogram(signal: np.ndarray, title: str, output_path: Path) -> None:
-    frequencies, times, spectrum = sg.spectrogram(
-        signal,
-        nperseg=256,
-        noverlap=128,
-    )
-    spectrum_log = np.log1p(spectrum)
+def save_spectrogram(window: np.ndarray, title: str, output_path: Path) -> None:
+    """Plot the normalized spectrogram representation supplied to the CNN."""
+    model_input = windows_to_model_input(window[np.newaxis, :])[0, ..., 0]
 
     plt.figure(figsize=(5, 4))
-    plt.pcolormesh(times, frequencies, spectrum_log, shading="gouraud")
+    plt.imshow(model_input, aspect="auto", origin="lower", cmap="viridis")
     plt.title(title)
-    plt.xlabel("Time")
-    plt.ylabel("Frequency")
-    plt.colorbar()
+    plt.xlabel("Time frame")
+    plt.ylabel("Frequency bin")
+    plt.colorbar(label="Normalized log spectrum")
     plt.tight_layout()
     plt.savefig(output_path, dpi=160)
     plt.close()
@@ -58,4 +53,3 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
-

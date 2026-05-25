@@ -120,6 +120,9 @@ def main() -> None:
 
     metadata = {
         "classes": CLASSES,
+        "test_evaluation_role": "random-window-holdout-from-training-source-recordings",
+        "test_evaluation_unit": "non_overlapping_window",
+        "test_samples": int(len(y_test)),
         "test_loss": float(test_loss),
         "test_accuracy": float(test_accuracy),
         "input_shape": list(x_train.shape[1:]),

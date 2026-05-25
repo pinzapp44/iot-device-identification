@@ -19,6 +19,28 @@ from evaluation import (
 from infer import load_classes, predict_signal
 
 
+def wilson_confidence_interval(
+    successes: int,
+    total: int,
+    z: float = 1.96,
+) -> tuple[float, float]:
+    """Return a Wilson score confidence interval for a binomial accuracy."""
+    if total <= 0:
+        return 0.0, 0.0
+
+    proportion = successes / total
+    denominator = 1 + (z**2 / total)
+    center = (proportion + z**2 / (2 * total)) / denominator
+    margin = (
+        z
+        * np.sqrt((proportion * (1 - proportion) / total) + (z**2 / (4 * total**2)))
+        / denominator
+    )
+    low = 0.0 if successes == 0 else max(0.0, float(center - margin))
+    high = 1.0 if successes == total else min(1.0, float(center + margin))
+    return low, high
+
+
 def default_test_data_dir() -> Path:
     """Prefer data/tests, but support the existing data/test folder."""
     for candidate in (Path("data/tests"), Path("data/test")):
@@ -125,7 +147,12 @@ def run_test(
 
     y_true_array = np.asarray(y_true, dtype=np.int64)
     y_pred_array = np.asarray(y_pred, dtype=np.int64)
-    accuracy = float(np.mean(y_true_array == y_pred_array)) if len(y_true_array) else 0.0
+    correct_files = int(np.sum(y_true_array == y_pred_array))
+    accuracy = float(correct_files / len(y_true_array)) if len(y_true_array) else 0.0
+    accuracy_ci_low, accuracy_ci_high = wilson_confidence_interval(
+        correct_files,
+        len(y_true_array),
+    )
 
     report = write_classification_report(
         y_true_array,
@@ -146,10 +173,18 @@ def run_test(
     )
 
     metrics = {
+        "evaluation_role": "external-file-level-ensemble",
+        "evaluation_unit": "source_file",
         "data_dir": str(data_dir),
         "model": str(model_path),
         "files": len(rows),
+        "correct_files": correct_files,
         "accuracy": accuracy,
+        "accuracy_ci_95_wilson": {
+            "low": accuracy_ci_low,
+            "high": accuracy_ci_high,
+        },
+        "interpretation": "Each file contributes one prediction; window count is not the number of independent test examples.",
         "window_size": int(window_size),
         "step": int(step),
     }

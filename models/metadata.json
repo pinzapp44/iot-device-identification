@@ -7,6 +7,9 @@
     "sigfox",
     "miwi"
   ],
+  "test_evaluation_role": "random-window-holdout-from-training-source-recordings",
+  "test_evaluation_unit": "non_overlapping_window",
+  "test_samples": 1465,
   "test_loss": 0.19829830527305603,
   "test_accuracy": 0.9453924894332886,
   "input_shape": [

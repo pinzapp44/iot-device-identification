@@ -1,15 +1,15 @@
 import numpy as np
-import sys
 import os
+import sys
 
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'src')))
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "src")))
 
-from spectrogram import create_spectrograms
+from preprocessing import create_spectrograms
+
 
 def test_create_spectrograms():
-    windows = np.random.randn(3, 4096)  # 3 random windows
+    windows = np.random.default_rng(42).standard_normal((3, 4096))
     specs = create_spectrograms(windows)
-    
-    assert len(specs.shape) == 4
-    assert specs.shape[0] == 3
-    assert specs.shape[3] == 1  # channel
+
+    assert specs.shape == (3, 257, 61, 1)
+    assert specs.dtype == np.float32

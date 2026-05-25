@@ -1,4 +1,6 @@
 {
+  "evaluation_role": "training-source-diagnostic",
+  "evaluation_unit": "non_overlapping_window",
   "data_dir": "data/raw",
   "model": "models/best_iot_classifier.h5",
   "samples": 14646,

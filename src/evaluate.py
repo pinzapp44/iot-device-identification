@@ -20,12 +20,26 @@ from infer import load_classes
 from preprocessing import class_distribution
 
 
+EVALUATION_ROLES = ("training-source-diagnostic", "external-window-evaluation")
+
+
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--model", type=Path, default=Path("models/best_iot_classifier.h5"))
     parser.add_argument("--metadata", type=Path, default=Path("models/metadata.json"))
-    parser.add_argument("--data-dir", type=Path, default=Path("data/raw"))
+    parser.add_argument(
+        "--data-dir",
+        type=Path,
+        required=True,
+        help="Directory of labeled signals to score; specify this explicitly to avoid confusing training-source and external metrics.",
+    )
     parser.add_argument("--output-dir", type=Path, default=Path("results/evaluation"))
+    parser.add_argument(
+        "--evaluation-role",
+        required=True,
+        choices=EVALUATION_ROLES,
+        help="Declare how the labeled signals relate to training data.",
+    )
     parser.add_argument("--batch-size", type=int, default=BATCH_SIZE)
     parser.add_argument("--window-size", type=int, default=WINDOW_SIZE)
     parser.add_argument("--seed", type=int, default=SEED)
@@ -81,8 +95,13 @@ def run_evaluation(
     file_template: str | None = None,
     balance: bool = False,
     allow_missing: bool = False,
+    evaluation_role: str | None = None,
 ) -> dict[str, object]:
     """Evaluate model performance on labeled files and save reports."""
+    if evaluation_role not in EVALUATION_ROLES:
+        expected = ", ".join(EVALUATION_ROLES)
+        raise ValueError(f"evaluation_role must be one of: {expected}")
+
     classes = load_classes(metadata_path)
     output_dir.mkdir(parents=True, exist_ok=True)
 
@@ -125,6 +144,8 @@ def run_evaluation(
     )
 
     metrics = {
+        "evaluation_role": evaluation_role,
+        "evaluation_unit": "non_overlapping_window",
         "data_dir": str(data_dir),
         "model": str(model_path),
         "samples": int(len(y)),
@@ -141,6 +162,7 @@ def run_evaluation(
     )
 
     print(f"Evaluated {len(y)} windows from {data_dir}")
+    print(f"Evaluation role: {evaluation_role}")
     print(f"Accuracy: {accuracy:.4f}")
     print(report)
     print(f"Saved reports to: {output_dir}")
@@ -161,6 +183,7 @@ def main() -> None:
         file_template=args.file_template,
         balance=args.balance,
         allow_missing=args.allow_missing,
+        evaluation_role=args.evaluation_role,
     )
 
 

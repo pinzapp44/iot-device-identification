@@ -75,13 +75,7 @@ def main() -> None:
     for class_name, prob in result["probabilities"].items():
         print(f"  {class_name:>12s}: {prob * 100:.2f}%")
 
-    if conf >= 0.99:
-        print("\nTarget Efficiency (99%) Achieved!")
-    else:
-        print(
-            f"\nEfficiency at {conf * 100:.2f}%. "
-            "Training accuracy is high, the ensemble is stabilizing the output."
-        )
+    print("\nConfidence is an averaged model score across windows, not an accuracy estimate.")
 
 
 if __name__ == "__main__":

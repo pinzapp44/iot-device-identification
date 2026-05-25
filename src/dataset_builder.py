@@ -1,52 +1,49 @@
+"""Compatibility wrappers for the canonical dataset implementation.
+
+New code should import ``build_dataset`` and ``split_dataset`` from
+``dataset`` directly. This module remains for notebook-era callers.
+"""
+
+from __future__ import annotations
+
+from pathlib import Path
+
 import numpy as np
-from sklearn.utils import shuffle
-from sklearn.model_selection import train_test_split
 import tensorflow as tf
 
-from config import classes, data_files, NUM_CLASSES
-from data_loader import load_data
-from preprocessing import segment_signal, normalize_windows
-from spectrogram import create_spectrograms
+from config import CLASSES, NUM_CLASSES, SEED
+from dataset import build_dataset as _build_dataset
+from dataset import split_dataset
 
-def build_dataset():
-    all_specs = []
-    all_labels = []
 
-    for idx, cls in enumerate(classes):
-        raw = load_data(data_files[cls])
-
-        # Segment
-        windows = segment_signal(raw)
-
-        # Normalize each RF window
-        windows = normalize_windows(windows)
-
-        # Spectrograms
-        specs = create_spectrograms(windows)
-
-        all_specs.append(specs)
-        all_labels.append(np.full(len(specs), idx))
-
-    # Balance dataset (equal samples/class)
-    min_samples = min(len(s) for s in all_specs)
-
-    X = np.concatenate([s[:min_samples] for s in all_specs])
-    y = np.concatenate([l[:min_samples] for l in all_labels])
-
-    X, y = shuffle(X, y, random_state=42)
-    return X, y
-
-def get_train_val_test_splits(X, y):
-    X_train, X_temp, y_train, y_temp = train_test_split(
-        X, y, test_size=0.20, random_state=42, stratify=y
+def build_dataset(data_dir: Path = Path("data/raw")) -> tuple[np.ndarray, np.ndarray]:
+    """Build the balanced configured dataset through the canonical pipeline."""
+    return _build_dataset(
+        data_dir,
+        classes=CLASSES,
+        balance=True,
+        seed=SEED,
     )
 
-    X_val, X_test, y_val, y_test = train_test_split(
-        X_temp, y_temp, test_size=0.50, random_state=42, stratify=y_temp
-    )
 
+def get_train_val_test_splits(
+    x: np.ndarray,
+    y: np.ndarray,
+) -> tuple[
+    tuple[np.ndarray, np.ndarray],
+    tuple[np.ndarray, np.ndarray],
+    tuple[np.ndarray, np.ndarray],
+    np.ndarray,
+]:
+    """Return the legacy tuple shape using canonical stratified splitting."""
+    x_train, x_val, x_test, y_train, y_val, y_test = split_dataset(
+        x,
+        y,
+        test_size=0.10,
+        validation_size=0.10,
+        seed=SEED,
+    )
     y_train_cat = tf.keras.utils.to_categorical(y_train, NUM_CLASSES)
     y_val_cat = tf.keras.utils.to_categorical(y_val, NUM_CLASSES)
     y_test_cat = tf.keras.utils.to_categorical(y_test, NUM_CLASSES)
-
-    return (X_train, y_train_cat), (X_val, y_val_cat), (X_test, y_test_cat), y_test
+    return (x_train, y_train_cat), (x_val, y_val_cat), (x_test, y_test_cat), y_test
